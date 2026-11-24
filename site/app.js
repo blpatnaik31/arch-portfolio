@@ -111,10 +111,115 @@ const caseStudies = [
     ],
     adrs: ["ADR-001", "ADR-002", "ADR-003", "ADR-004"],
   },
+  {
+    slug: "metrics-automation-architecture",
+    number: "A2",
+    file: "case-studies/a2-metrics-automation-architecture.md",
+    title: "Metrics automation: CI vs scheduled vs manual scorers",
+    kicker: "Metrics architecture",
+    summary: "An assessment of all 12 scoreboard metric mechanisms, classified as automated, manual or absent, with controls for stage leakage, failure suppression and stale metrics before anything else gets automated.",
+    headline: "12 mechanisms · 3 options · 3 failure patterns",
+    status: "Draft",
+    role: "Product Owner & Solution Architect",
+    engagement: "A commerce/marketplace SaaS platform · AI-driven catalog",
+    period: "Jun 2026 – present",
+    tags: ["CI/CD", "Stage isolation", "Data observability", "Trade-offs"],
+    context: [
+      "A team scoreboard reported the quality metrics that delivery and prioritisation decisions depended on. Each metric was produced in its own way: some by CI workflows, some by scheduled jobs, some by a person running a model-backed scorer by hand, and some by nothing at all. Nobody had checked whether the number on the scoreboard was current, which environment it came from, or whether the job behind it had actually succeeded.",
+      "I had seen what bad metrics cost on this engagement before: a gap between live-blocked and ever-blocked counts that had to be reconciled before prioritisation could be trusted, and a contested quality target that needed a reproducible basis. This assessment applied the same scrutiny to the scoreboard as a whole.",
+    ],
+    forces: [
+      ["Different metrics need different mechanisms", "Deterministic counts suit automation. Judgment-based quality scores may need a model and a person."],
+      ["Mechanisms fail in different ways", "A CI job, a scheduled job and a manual run each go wrong differently, and the scoreboard showed all three the same way."],
+      ["Environments mix easily", "One metric can read from one stage and report as if it were another."],
+      ["A green tick isn't proof", "A job that hides its own failure still looks healthy, and the scoreboard keeps showing the last value."],
+      ["Old numbers look like new ones", "Without a timestamp, a months-old value reads as current."],
+    ],
+    decision: [
+      "Before automating anything further, review all 12 scoreboard metric mechanisms and classify each as automated, manual or absent.",
+      "Compare CI workflows, scheduled jobs and manual model-backed scorers against freshness, reproducibility, stage isolation, failure visibility and cost.",
+      "Name the three failure patterns (stage leakage, failure suppression, stale metrics) and set one control for each.",
+      "Document safe implementation choices so new and migrated metrics follow one pattern instead of each inventing its own.",
+    ],
+    diagram: {
+      label: "Metric assessment flow, from inventory to a scoreboard value with stage, time and status",
+      stages: [
+        { step: "Inventory", nodes: [{ kind: "data", title: "12 metric mechanisms", detail: "Every scoreboard metric and how it is produced" }] },
+        { step: "Classify", nodes: [
+          { kind: "code", title: "Automated", detail: "CI workflow or scheduled job" },
+          { kind: "llm", title: "Manual", detail: "Model-backed scorer run by a person" },
+          { kind: "human", title: "Absent", detail: "No mechanism: build, run manually, or drop" },
+        ] },
+        { step: "Control", nodes: [{ kind: "code", title: "Three controls", detail: "Explicit stage · fail loudly · freshness window" }] },
+        { step: "Report", nodes: [{ kind: "output", title: "Scoreboard value", detail: "Value plus stage, computed-at time and status" }] },
+      ],
+      caption: "Classify first, then apply the same controls to every mechanism, whatever kind it is.",
+    },
+    tables: [
+      {
+        title: "Comparing the options",
+        intro: "No single mechanism wins. The decision is to match the mechanism to the metric, then apply the same controls to all of them.",
+        head: ["Criterion", "CI workflow", "Scheduled job", "Manual model-backed scorer"],
+        rows: [
+          ["Runs when", "Code changes", "On a clock", "Someone remembers to run it"],
+          ["Freshness", "Stale when data changes without a commit", "Predictable, if the job succeeds", "Least predictable"],
+          ["Reproducibility", "High, versioned with the code", "High, versioned with the code", "Low unless prompt, model and sample are pinned"],
+          ["Stage isolation risk", "Medium: CI context can point at the wrong environment", "Medium: one schedule can serve several stages", "High: run against whatever is configured locally"],
+          ["Failure visibility", "Good, unless the failure is suppressed", "Poor by default: a failed run leaves the old value", "None: a skipped run looks like no change"],
+          ["Best fit", "Deterministic checks tied to a code change", "Deterministic metrics over live data", "Judgment-based quality scores"],
+        ],
+      },
+      {
+        title: "Failure patterns and controls",
+        head: ["Failure pattern", "What it looks like", "Control"],
+        rows: [
+          ["Stage leakage", "A metric computed against one environment stage is reported as another, or mixes data across stages", "The stage is an explicit input, written next to the value. A mismatch fails the run."],
+          ["Failure suppression", "Error-swallowing patterns make a failed run look green and leave the previous value on the board", "Metric jobs fail loudly. A failed run writes a failed status instead of keeping the old value."],
+          ["Stale metrics", "A value with no timestamp keeps being shown long after its mechanism stopped running", "Every value carries computed-at time, stage and mechanism. Values past their freshness window are flagged."],
+        ],
+        after: [
+          "Manual scorers also need a pinned prompt and model version, a recorded sample, and a named runner on a stated cadence. Otherwise the metric is shown as \"manual, last run on &lt;date&gt;\", never as current.",
+          "Absent metrics need a decision, not a placeholder: build a mechanism, run it manually with an owner, or remove it from the scoreboard.",
+        ],
+      },
+    ],
+    alternatives: [
+      ["Automate everything in CI now", "CI runs on code change, not data change, so CI-only metrics go stale between commits. Automating first also locks in the existing stage and failure problems."],
+      ["Move everything to one scheduler", "Fixes freshness but not stage leakage or hidden failures, and has no good place for judgment-based scorers."],
+      ["Keep manual scorers as they are", "Not reproducible and invisible when skipped. The scoreboard can't tell \"unchanged\" from \"not run\"."],
+      ["Remove judgment-based metrics", "Leaves out the quality signals the team most needed. Govern the manual runs instead of dropping them."],
+    ],
+    boundaries: [
+      ["Stage", "Stated explicitly, never inferred. A mismatch fails the run."],
+      ["Success vs failure", "A failed run is reported as failed, never shown as the last good value."],
+      ["Fresh vs stale", "Each metric has a freshness window, and the scoreboard shows when it has passed."],
+      ["Automated vs manual", "Manual, model-backed scoring only with pinned inputs, a named runner and a visible last-run date."],
+    ],
+    risks: [
+      ["Decisions made on a number from the wrong environment", "Stage recorded with every value; mismatch fails the run"],
+      ["A broken metric job goes unnoticed for weeks", "No failure suppression; failed status replaces the value"],
+      ["Old values treated as current", "Timestamp plus freshness window; stale flag on the scoreboard"],
+      ["Manual scores drift between runs", "Pinned prompt, model and sample; named runner"],
+      ["Automating before metric definitions are sound", "Inventory and classify first; reconcile definitions before automating"],
+    ],
+    outcomes: [
+      ["12", "scoreboard metric mechanisms reviewed and classified"],
+      ["3", "automation options compared: CI, scheduled, manual scorer"],
+      ["3", "failure patterns named, each with a control"],
+      ["1", "documented pattern for new and migrated metrics"],
+    ],
+    measureNext: [
+      "Share of scoreboard metrics with stage, timestamp and status recorded",
+      "Share of metrics inside their freshness window at any given time",
+      "Metric job failures detected vs previously hidden, once suppression is removed",
+      "Time from a metric breaking to someone noticing",
+      "Absent metrics resolved: built, made manual with an owner, or removed",
+    ],
+    adrs: ["ADR-005", "ADR-006", "ADR-007"],
+  },
 ];
 
 const planned = [
-  ["A2", "Metrics automation: CI vs scheduled vs manual scorers", "Twelve scoreboard metric mechanisms classified as automated, manual or absent, with controls for stage leakage, silenced failures and stale metrics."],
   ["A3", "Designing a defensible end-to-end quality metric", "Corpus and answer-key design across 276 candidate products, 57 product types and 17 accounts: stable identity joins, stratification and confidence intervals."],
   ["A4", "Reusable channel onboarding for a marketplace pipeline", "An RFC separating shared capabilities from channel-specific mappings, classifying 11 runtime and 14 tooling artifact types, with a per-category rollout loop."],
 ];
@@ -124,6 +229,9 @@ const decisions = [
   { id: "ADR-002", file: "decisions/adr-002-script-vs-model-boundary.md", title: "Script vs model boundary", study: "A1", body: "Scripted workers for every deterministic step. Models only for judgment and resolution, and their output never changes a product directly." },
   { id: "ADR-003", file: "decisions/adr-003-three-clean-run-verification.md", title: "Three-clean-run verification", study: "A1", body: "A repair counts as verified only after three consecutive clean runs, catching flaky fixes before packaging rather than after re-drive." },
   { id: "ADR-004", file: "decisions/adr-004-named-stop-states.md", title: "Named stop states with owners", study: "A1", body: "Every case that leaves automation ends in a named state with an owner and a reason, so nothing stalls unseen." },
+  { id: "ADR-005", file: "decisions/adr-005-stage-is-explicit.md", title: "Stage is an explicit input", study: "A2", body: "Every metric job states its environment stage, records it next to the value, and fails if the configured and actual stage disagree." },
+  { id: "ADR-006", file: "decisions/adr-006-metric-jobs-fail-loudly.md", title: "Metric jobs fail loudly", study: "A2", body: "No failure suppression. A failed run writes a failed status instead of leaving the last good value on the scoreboard." },
+  { id: "ADR-007", file: "decisions/adr-007-freshness-is-part-of-the-metric.md", title: "Freshness is part of the metric", study: "A2", body: "Every value carries time, stage and mechanism, and is flagged once it passes its freshness window." },
 ];
 
 const principles = [
@@ -247,10 +355,11 @@ function renderStudy(slug) {
     <section class="detail-section"><h2>Context</h2>${s.context.map((p) => `<p>${p}</p>`).join("")}</section>
     <section class="detail-section"><h2>Forces</h2><ul>${s.forces.map(([t, b]) => `<li><strong>${t}.</strong> ${b}</li>`).join("")}</ul></section>
     <section class="detail-section"><h2>Decision</h2><ul>${s.decision.map((d) => `<li>${d}</li>`).join("")}</ul>${diagram(s.diagram)}</section>
-    <section class="detail-section"><h2>Worker roster</h2><p>Scripted workers handle deterministic work. Model-backed workers are limited to judgment and resolution.</p>${table(["#", "Worker", "Pass", "Type", "Responsibility"], s.roster, [0, 2])}</section>
+    ${s.roster ? `<section class="detail-section"><h2>Worker roster</h2><p>Scripted workers handle deterministic work. Model-backed workers are limited to judgment and resolution.</p>${table(["#", "Worker", "Pass", "Type", "Responsibility"], s.roster, [0, 2])}</section>` : ""}
+    ${(s.tables || []).map((t) => `<section class="detail-section"><h2>${t.title}</h2>${t.intro ? `<p>${t.intro}</p>` : ""}${table(t.head, t.rows)}${(t.after || []).map((a) => `<p>${a}</p>`).join("")}</section>`).join("")}
     <section class="detail-section"><h2>Alternatives considered</h2>${table(["Option", "Why not"], s.alternatives)}</section>
     <section class="detail-section"><h2>Control boundaries</h2>${table(["Boundary", "Rule"], s.boundaries)}</section>
-    <section class="detail-section"><h2>Handoff contract</h2><p>Every worker hand-off uses the same envelope, so the lead agent and the audit trail can treat all eight workers alike.</p>${code(s.contract)}<h3 style="margin-top:1.6rem">Named stop states</h3>${table(["Stop state", "Entered when", "Owner"], s.stopStates.map(([a, b, c]) => [`<code>${a}</code>`, b, c]))}<p>Each stop state is a finished result with an owner, not an error. Every blocked product is either fixed, waiting for approval, or with a named owner.</p></section>
+    ${s.contract ? `<section class="detail-section"><h2>Handoff contract</h2><p>Every worker hand-off uses the same envelope, so the lead agent and the audit trail can treat all eight workers alike.</p>${code(s.contract)}<h3 style="margin-top:1.6rem">Named stop states</h3>${table(["Stop state", "Entered when", "Owner"], s.stopStates.map(([a, b, c]) => [`<code>${a}</code>`, b, c]))}<p>Each stop state is a finished result with an owner, not an error. Every blocked product is either fixed, waiting for approval, or with a named owner.</p></section>` : ""}
     <section class="detail-section"><h2>Risks and mitigations</h2>${table(["Risk", "Mitigation in the design"], s.risks)}</section>
     <section class="detail-section"><h2>Scope evidence</h2><div class="outcomes-grid">${s.outcomes.map(([v, l]) => `<div class="outcome-card"><span class="outcome-value">${v}</span><span class="outcome-label">${l}</span></div>`).join("")}</div></section>
     <section class="detail-section"><h2>What I'd measure next</h2><div class="scope-note"><strong>Scope-driven case study.</strong><br>The engagement is ongoing, so outcome metrics are being set up rather than estimated after the fact.</div><ul>${s.measureNext.map((m) => `<li>${m}</li>`).join("")}</ul></section>

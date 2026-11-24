@@ -8,3 +8,6 @@ Short records of the key decisions behind each case study, in the usual ADR form
 | [ADR-002](adr-002-script-vs-model-boundary.md) | Scripted workers for deterministic work; models only for judgment and resolution | A1 | Accepted |
 | [ADR-003](adr-003-three-clean-run-verification.md) | A repair counts as verified only after three consecutive clean runs | A1 | Accepted |
 | [ADR-004](adr-004-named-stop-states.md) | Cases outside automation end in named stop states with explicit owners | A1 | Accepted |
+| [ADR-005](adr-005-stage-is-explicit.md) | The environment stage is an explicit input to every metric | A2 | Accepted |
+| [ADR-006](adr-006-metric-jobs-fail-loudly.md) | Metric jobs fail loudly; no failure suppression | A2 | Accepted |
+| [ADR-007](adr-007-freshness-is-part-of-the-metric.md) | Freshness (time, stage, mechanism) is part of every metric | A2 | Accepted |

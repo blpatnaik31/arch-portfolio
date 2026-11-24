@@ -13,7 +13,7 @@ Each one uses the same architecture-review structure: context and forces → dec
 | # | Case study | Focus | Status |
 |---|---|---|---|
 | A1 | [Governed multi-agent repair for blocked catalog products](case-studies/a1-governed-multi-agent-repair.md) | Lead/worker orchestration, two-pass operating model, human gate, named stop states | Draft |
-| A2 | Metrics automation: CI vs scheduled vs manual scorers | Stage isolation, failure suppression, stale metrics, 12 mechanisms reviewed | Planned |
+| A2 | [Metrics automation: CI vs scheduled vs manual scorers](case-studies/a2-metrics-automation-architecture.md) | Stage isolation, failure suppression, stale metrics, 12 mechanisms reviewed | Draft |
 | A3 | Designing a defensible end-to-end quality metric | Corpus and answer-key design, stratification, confidence intervals | Planned |
 | A4 | Reusable channel onboarding for a marketplace pipeline | RFC: shared vs channel-specific layers, per-category rollout loop | Planned |
 

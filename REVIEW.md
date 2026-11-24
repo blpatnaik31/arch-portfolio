@@ -19,6 +19,18 @@ The items below were **written to illustrate that confirmed design** and need yo
 
 > The master workbook (as of 2026-11-20) has no record of the multi-agent repair design itself. Consider adding it as a project under the current engagement so the workbook stays the source of truth.
 
-## A2–A4
+## A2 — Metrics automation
+
+The master workbook (Project 22) confirms: **12** scoreboard metric mechanisms reviewed and classified as automated / manual / absent; CI workflows, scheduled jobs and manual model-backed scorers compared; stage leakage, failure suppression and stale metrics identified; safe implementation choices documented.
+
+Needs your sign-off or correction:
+
+1. **Comparison matrix** (§3): the ratings are my framing of the usual trade-offs. Check they match what your assessment actually concluded.
+2. **Controls** (§4 and ADR-005/006/007): explicit stage input, fail loudly, freshness window. Confirm these match the safe implementation choices you documented, or replace them.
+3. **Classification counts:** the case study gives the total (12) but not how many were automated / manual / absent. Add the split if you want it shown.
+4. **Context paragraph** (§1): references the live-blocked vs ever-blocked reconciliation (Project 10) and the contested quality target (Project 15) as background. Confirm that's fine to publish.
+5. **Alternatives considered** (§5): confirm these were actually weighed.
+
+## A3–A4
 
 Not drafted yet. They appear on the site as "Planned" cards only, without detail pages.

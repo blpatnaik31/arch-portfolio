@@ -11,3 +11,6 @@ Short records of the key decisions behind each case study, in the usual ADR form
 | [ADR-005](adr-005-stage-is-explicit.md) | The environment stage is an explicit input to every metric | A2 | Accepted |
 | [ADR-006](adr-006-metric-jobs-fail-loudly.md) | Metric jobs fail loudly; no failure suppression | A2 | Accepted |
 | [ADR-007](adr-007-freshness-is-part-of-the-metric.md) | Freshness (time, stage, mechanism) is part of every metric | A2 | Accepted |
+| [ADR-008](adr-008-stable-product-identity.md) | Join corpus, outputs and answer key on stable product identity | A3 | Accepted |
+| [ADR-009](adr-009-report-with-confidence-intervals.md) | Report every quality figure with n and a 95% CI; no per-type scores | A3 | Accepted |
+| [ADR-010](adr-010-stratify-and-report-concentration.md) | Stratify by product type; measure and report account concentration | A3 | Accepted |

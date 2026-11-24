@@ -217,10 +217,116 @@ const caseStudies = [
     ],
     adrs: ["ADR-005", "ADR-006", "ADR-007"],
   },
+  {
+    slug: "quality-metric-corpus-design",
+    number: "A3",
+    file: "case-studies/a3-quality-metric-corpus-design.md",
+    title: "Designing a defensible end-to-end quality metric",
+    kicker: "Measurement design",
+    summary: "Corpus, answer-key and data-join requirements for an end-to-end quality metric across 276 candidate products, 57 product types and 17 accounts, designed so the number holds up when someone challenges it.",
+    headline: "276 products · 57 types · 17 accounts",
+    status: "Draft",
+    role: "Product Owner & Solution Architect",
+    engagement: "A commerce/marketplace SaaS platform · AI-driven catalog",
+    period: "Jun 2026 – present",
+    tags: ["Data architecture", "Statistics", "Answer keys", "Data joins"],
+    context: [
+      "The catalog engine takes sellers' raw product data and turns it into marketplace listings across several pipeline stages. The team needed one end-to-end quality number: of the products that go in, how many come out correct? I had already seen a quality target disputed on this engagement because it had no reproducible basis, so this one had to be defensible before it was built.",
+      "A quality metric depends on two things: the corpus (which products are measured) and the answer key (what \"correct\" means for each one). Getting either wrong produces a precise-looking number that means nothing.",
+    ],
+    forces: [
+      ["Product identity isn't stable by default", "The same product can appear under different identifiers across stages and re-runs. Join on the wrong key and the answer key attaches to the wrong output."],
+      ["The candidate pool is wide and thin", "276 products across 57 product types averages fewer than 5 per type."],
+      ["Accounts aren't evenly represented", "If a few of the 17 accounts dominate the corpus, the metric describes those sellers, not the platform."],
+      ["A single number hides its uncertainty", "\"82% correct\" means very different things at n = 30 and n = 300."],
+      ["Schemas drift", "Fields the answer key depends on may be missing, renamed or differently populated at different stages."],
+    ],
+    decision: [
+      "Join the corpus, pipeline outputs and answer key on a stable product identity that survives stages and re-runs.",
+      "Publish every quality figure with its sample size and 95% confidence interval.",
+      "Stratify the corpus across product types, and measure and report each account's share.",
+      "Close join and schema gaps, or explicitly exclude the affected products, before the metric goes live.",
+    ],
+    diagram: {
+      label: "Corpus design flow, from candidate pool to a quality estimate with n and confidence interval",
+      stages: [
+        { step: "Pool", nodes: [{ kind: "data", title: "Candidate pool", detail: "276 products · 57 types · 17 accounts" }] },
+        { step: "Join", nodes: [{ kind: "code", title: "Stable identity join", detail: "Corpus ↔ pipeline outputs ↔ answer key" }], note: "Unresolved identity or schema gap → fix or exclude, documented" },
+        { step: "Cover", nodes: [
+          { kind: "code", title: "Type strata", detail: "Span the product-type range" },
+          { kind: "code", title: "Account share", detail: "Measured and reported" },
+        ] },
+        { step: "Key", nodes: [{ kind: "human", title: "Answer key", detail: "Expected result per corpus product" }] },
+        { step: "Report", nodes: [{ kind: "output", title: "Quality metric", detail: "Estimate + n + 95% CI, no per-type scores" }] },
+      ],
+      caption: "Statistical coverage and join requirements are set before the metric is built, not added afterwards.",
+    },
+    tables: [
+      {
+        title: "Why the statistics shape the design",
+        intro: "Worst-case 95% margin of error for a proportion (p = 0.5), by sample size. Standard arithmetic on the corpus counts.",
+        head: ["Sample", "What it represents", "± margin (95%)"],
+        rows: [
+          ["276", "Full candidate pool", "≈ ±5.9 points"],
+          ["100", "A large sub-group", "≈ ±9.8 points"],
+          ["30", "A small sub-group", "≈ ±17.9 points"],
+          ["~5", "Average products per type (276 ÷ 57)", "≈ ±44 points"],
+        ],
+        after: [
+          "<strong>The headline number is usable; per-type numbers are not.</strong> Stratification makes the overall number representative. It doesn't produce 57 reliable per-type scores.",
+          "<strong>A change has to be bigger than the interval to count.</strong> A 2–3 point movement on the headline is inside the margin and isn't reported as progress.",
+        ],
+      },
+      {
+        title: "Coverage requirements",
+        head: ["Dimension", "Requirement", "Why"],
+        rows: [
+          ["Product identity", "Every corpus product resolves to one stable identity across stages", "Prevents the answer key matching the wrong output"],
+          ["Product type", "Corpus spans the product-type range, not only the most common types", "Keeps the headline number representative"],
+          ["Account", "Each account's share of the corpus is measured and reported", "Stops one seller's data from setting the platform score"],
+          ["Sample size", "n and 95% CI reported with every figure", "Makes the uncertainty visible"],
+          ["Schema", "Fields the answer key depends on are present at every stage measured", "Prevents silent drops and misjoins"],
+        ],
+      },
+    ],
+    alternatives: [
+      ["Measure whatever recent products are easiest to pull", "Over-represents common types and high-volume accounts, so the number describes the biggest sellers."],
+      ["Join on per-run identifiers", "Breaks when products are re-ingested or re-run, attaching expected results to the wrong outputs."],
+      ["Report per-type quality scores", "At ~5 products per type the intervals are too wide to mean anything."],
+      ["Report a single percentage without an interval", "Invites reading noise as progress and reopens the \"where does this number come from\" dispute."],
+      ["Build the metric first, fix data gaps later", "The first published number would be wrong, and a wrong first number is hard to retract."],
+    ],
+    boundaries: [
+      ["Identity", "Resolved to one stable identity, or excluded. Never guessed."],
+      ["Precision", "Only figures whose interval supports a conclusion are reported."],
+      ["Representation", "Product-type coverage and account share are checked before every run of the metric."],
+      ["Launch", "No metric goes live with known join or schema gaps unresolved and undocumented."],
+    ],
+    risks: [
+      ["Expected results attached to the wrong product", "Stable identity join; misjoins treated as gaps to fix or exclude"],
+      ["Metric dominated by a few accounts", "Account share measured and reported with the metric"],
+      ["Noise reported as progress", "n and CI with every figure; no per-type scores"],
+      ["Products silently dropped by schema gaps", "Gaps found and resolved or explicitly excluded before launch"],
+      ["The number is disputed later", "Corpus, answer key and join logic documented so the figure can be reproduced"],
+    ],
+    outcomes: [
+      ["276", "candidate products evaluated for the corpus"],
+      ["57", "product types in the stratification design"],
+      ["17", "accounts checked for concentration"],
+      ["±5.9", "worst-case 95% margin on the full pool (arithmetic, not a result)"],
+    ],
+    measureNext: [
+      "Share of corpus products resolving to one stable identity across all stages measured",
+      "Headline quality estimate with n and 95% CI, tracked across releases",
+      "Largest single-account share, and how the metric moves without that account",
+      "Join and schema gaps open vs resolved",
+      "Agreement between independent reviewers on a sample of answer-key entries",
+    ],
+    adrs: ["ADR-008", "ADR-009", "ADR-010"],
+  },
 ];
 
 const planned = [
-  ["A3", "Designing a defensible end-to-end quality metric", "Corpus and answer-key design across 276 candidate products, 57 product types and 17 accounts: stable identity joins, stratification and confidence intervals."],
   ["A4", "Reusable channel onboarding for a marketplace pipeline", "An RFC separating shared capabilities from channel-specific mappings, classifying 11 runtime and 14 tooling artifact types, with a per-category rollout loop."],
 ];
 
@@ -232,6 +338,9 @@ const decisions = [
   { id: "ADR-005", file: "decisions/adr-005-stage-is-explicit.md", title: "Stage is an explicit input", study: "A2", body: "Every metric job states its environment stage, records it next to the value, and fails if the configured and actual stage disagree." },
   { id: "ADR-006", file: "decisions/adr-006-metric-jobs-fail-loudly.md", title: "Metric jobs fail loudly", study: "A2", body: "No failure suppression. A failed run writes a failed status instead of leaving the last good value on the scoreboard." },
   { id: "ADR-007", file: "decisions/adr-007-freshness-is-part-of-the-metric.md", title: "Freshness is part of the metric", study: "A2", body: "Every value carries time, stage and mechanism, and is flagged once it passes its freshness window." },
+  { id: "ADR-008", file: "decisions/adr-008-stable-product-identity.md", title: "Join on stable product identity", study: "A3", body: "Corpus, outputs and answer key join on an identity that survives stages and re-runs. Unresolvable products are fixed or excluded, never guessed." },
+  { id: "ADR-009", file: "decisions/adr-009-report-with-confidence-intervals.md", title: "Report n and a confidence interval", study: "A3", body: "Every quality figure ships with its sample size and 95% CI. No per-type scores at a corpus this thin." },
+  { id: "ADR-010", file: "decisions/adr-010-stratify-and-report-concentration.md", title: "Stratify; report account share", study: "A3", body: "Cover the product-type range and report each account's share, so the platform number isn't really a few sellers' number." },
 ];
 
 const principles = [

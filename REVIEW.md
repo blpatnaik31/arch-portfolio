@@ -31,6 +31,18 @@ Needs your sign-off or correction:
 4. **Context paragraph** (§1): references the live-blocked vs ever-blocked reconciliation (Project 10) and the contested quality target (Project 15) as background. Confirm that's fine to publish.
 5. **Alternatives considered** (§5): confirm these were actually weighed.
 
-## A3–A4
+## A3 — Quality-metric corpus design
 
-Not drafted yet. They appear on the site as "Planned" cards only, without detail pages.
+The master workbook (Project 23) confirms: data joins and statistical coverage requirements designed (stable product identity, confidence intervals, product-type stratification, account concentration); **276** candidate products, **57** product types, **17** accounts evaluated; join and schema gaps identified.
+
+Needs your sign-off or correction:
+
+1. **Margin-of-error table** (§3): standard worst-case arithmetic on the confirmed counts, not figures from your work. Check you're happy showing it, and that "no per-type scores" matches what you recommended.
+2. **The five requirements** (§2, §4 and ADR-008/009/010): genericized from the confirmed design elements. Confirm or correct, especially "fix or exclude" for identity gaps and reporting account share with the metric.
+3. **Context** (§1): describes the catalog engine as having several pipeline stages, and mentions a previously disputed quality target (Project 15). Confirm both are fine to publish.
+4. **Answer key:** the workbook doesn't say how expected results were defined (human-labelled, rule-derived, or mixed). The diagram shows it as a human step. Correct it if that's wrong.
+5. **Alternatives considered** (§5): confirm these were actually weighed.
+
+## A4
+
+Not drafted yet. It appears on the site as a "Planned" card only, without a detail page.

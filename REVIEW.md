@@ -19,6 +19,38 @@ The items below were **written to illustrate that confirmed design** and need yo
 
 > The master workbook (as of 2026-11-20) has no record of the multi-agent repair design itself. Consider adding it as a project under the current engagement so the workbook stays the source of truth.
 
-## A2–A4
+## A2 — Metrics automation
 
-Not drafted yet. They appear on the site as "Planned" cards only, without detail pages.
+The master workbook (Project 22) confirms: **12** scoreboard metric mechanisms reviewed and classified as automated / manual / absent; CI workflows, scheduled jobs and manual model-backed scorers compared; stage leakage, failure suppression and stale metrics identified; safe implementation choices documented.
+
+Needs your sign-off or correction:
+
+1. **Comparison matrix** (§3): the ratings are my framing of the usual trade-offs. Check they match what your assessment actually concluded.
+2. **Controls** (§4 and ADR-005/006/007): explicit stage input, fail loudly, freshness window. Confirm these match the safe implementation choices you documented, or replace them.
+3. **Classification counts:** the case study gives the total (12) but not how many were automated / manual / absent. Add the split if you want it shown.
+4. **Context paragraph** (§1): references the live-blocked vs ever-blocked reconciliation (Project 10) and the contested quality target (Project 15) as background. Confirm that's fine to publish.
+5. **Alternatives considered** (§5): confirm these were actually weighed.
+
+## A3 — Quality-metric corpus design
+
+The master workbook (Project 23) confirms: data joins and statistical coverage requirements designed (stable product identity, confidence intervals, product-type stratification, account concentration); **276** candidate products, **57** product types, **17** accounts evaluated; join and schema gaps identified.
+
+Needs your sign-off or correction:
+
+1. **Margin-of-error table** (§3): standard worst-case arithmetic on the confirmed counts, not figures from your work. Check you're happy showing it, and that "no per-type scores" matches what you recommended.
+2. **The five requirements** (§2, §4 and ADR-008/009/010): genericized from the confirmed design elements. Confirm or correct, especially "fix or exclude" for identity gaps and reporting account share with the metric.
+3. **Context** (§1): describes the catalog engine as having several pipeline stages, and mentions a previously disputed quality target (Project 15). Confirm both are fine to publish.
+4. **Answer key:** the workbook doesn't say how expected results were defined (human-labelled, rule-derived, or mixed). The diagram shows it as a human step. Correct it if that's wrong.
+5. **Alternatives considered** (§5): confirm these were actually weighed.
+
+## A4 — Reusable channel onboarding
+
+The master workbook (Project 24) confirms: an RFC extending the marketplace transformation pipeline to a new sales channel; shared capabilities separated from channel-specific mappings, transforms and operational artifacts; a repeatable per-category rollout loop; **11** runtime and **14** tooling artifact types classified for a reference implementation. Background comes from Project 7 (channel-bootstrap RFC, classification research) and Project 3 (8+ validation packets, hundreds of SKUs).
+
+Needs your sign-off or correction:
+
+1. **Artifact examples** (§3): the examples given for each layer are genericized guesses at the kind of artifact. The real 25 type names aren't in the workbook. Replace them with genericized versions of the real ones, or keep them generic.
+2. **Second classification axis** (§3, ADR-012): "shared vs channel-specific" as a second axis next to runtime vs tooling is my framing of "separated shared capabilities from channel-specific" work. Confirm.
+3. **The rollout loop's steps and exit criteria** (§4, ADR-013): the workbook confirms a repeatable per-category loop but not its steps. The validation-packet step comes from Project 3. Confirm or correct the rest.
+4. **Shared-core diagram** (§2): the boxes ("Intake + normalisation", "Shared transform / validation engine") are generic. Make sure they don't imply a structure that differs from the real pipeline.
+5. **Alternatives considered** (§5): confirm these were actually weighed.

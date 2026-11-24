@@ -111,12 +111,327 @@ const caseStudies = [
     ],
     adrs: ["ADR-001", "ADR-002", "ADR-003", "ADR-004"],
   },
+  {
+    slug: "metrics-automation-architecture",
+    number: "A2",
+    file: "case-studies/a2-metrics-automation-architecture.md",
+    title: "Metrics automation: CI vs scheduled vs manual scorers",
+    kicker: "Metrics architecture",
+    summary: "An assessment of all 12 scoreboard metric mechanisms, classified as automated, manual or absent, with controls for stage leakage, failure suppression and stale metrics before anything else gets automated.",
+    headline: "12 mechanisms · 3 options · 3 failure patterns",
+    status: "Draft",
+    role: "Product Owner & Solution Architect",
+    engagement: "A commerce/marketplace SaaS platform · AI-driven catalog",
+    period: "Jun 2026 – present",
+    tags: ["CI/CD", "Stage isolation", "Data observability", "Trade-offs"],
+    context: [
+      "A team scoreboard reported the quality metrics that delivery and prioritisation decisions depended on. Each metric was produced in its own way: some by CI workflows, some by scheduled jobs, some by a person running a model-backed scorer by hand, and some by nothing at all. Nobody had checked whether the number on the scoreboard was current, which environment it came from, or whether the job behind it had actually succeeded.",
+      "I had seen what bad metrics cost on this engagement before: a gap between live-blocked and ever-blocked counts that had to be reconciled before prioritisation could be trusted, and a contested quality target that needed a reproducible basis. This assessment applied the same scrutiny to the scoreboard as a whole.",
+    ],
+    forces: [
+      ["Different metrics need different mechanisms", "Deterministic counts suit automation. Judgment-based quality scores may need a model and a person."],
+      ["Mechanisms fail in different ways", "A CI job, a scheduled job and a manual run each go wrong differently, and the scoreboard showed all three the same way."],
+      ["Environments mix easily", "One metric can read from one stage and report as if it were another."],
+      ["A green tick isn't proof", "A job that hides its own failure still looks healthy, and the scoreboard keeps showing the last value."],
+      ["Old numbers look like new ones", "Without a timestamp, a months-old value reads as current."],
+    ],
+    decision: [
+      "Before automating anything further, review all 12 scoreboard metric mechanisms and classify each as automated, manual or absent.",
+      "Compare CI workflows, scheduled jobs and manual model-backed scorers against freshness, reproducibility, stage isolation, failure visibility and cost.",
+      "Name the three failure patterns (stage leakage, failure suppression, stale metrics) and set one control for each.",
+      "Document safe implementation choices so new and migrated metrics follow one pattern instead of each inventing its own.",
+    ],
+    diagram: {
+      label: "Metric assessment flow, from inventory to a scoreboard value with stage, time and status",
+      stages: [
+        { step: "Inventory", nodes: [{ kind: "data", title: "12 metric mechanisms", detail: "Every scoreboard metric and how it is produced" }] },
+        { step: "Classify", nodes: [
+          { kind: "code", title: "Automated", detail: "CI workflow or scheduled job" },
+          { kind: "llm", title: "Manual", detail: "Model-backed scorer run by a person" },
+          { kind: "human", title: "Absent", detail: "No mechanism: build, run manually, or drop" },
+        ] },
+        { step: "Control", nodes: [{ kind: "code", title: "Three controls", detail: "Explicit stage · fail loudly · freshness window" }] },
+        { step: "Report", nodes: [{ kind: "output", title: "Scoreboard value", detail: "Value plus stage, computed-at time and status" }] },
+      ],
+      caption: "Classify first, then apply the same controls to every mechanism, whatever kind it is.",
+    },
+    tables: [
+      {
+        title: "Comparing the options",
+        intro: "No single mechanism wins. The decision is to match the mechanism to the metric, then apply the same controls to all of them.",
+        head: ["Criterion", "CI workflow", "Scheduled job", "Manual model-backed scorer"],
+        rows: [
+          ["Runs when", "Code changes", "On a clock", "Someone remembers to run it"],
+          ["Freshness", "Stale when data changes without a commit", "Predictable, if the job succeeds", "Least predictable"],
+          ["Reproducibility", "High, versioned with the code", "High, versioned with the code", "Low unless prompt, model and sample are pinned"],
+          ["Stage isolation risk", "Medium: CI context can point at the wrong environment", "Medium: one schedule can serve several stages", "High: run against whatever is configured locally"],
+          ["Failure visibility", "Good, unless the failure is suppressed", "Poor by default: a failed run leaves the old value", "None: a skipped run looks like no change"],
+          ["Best fit", "Deterministic checks tied to a code change", "Deterministic metrics over live data", "Judgment-based quality scores"],
+        ],
+      },
+      {
+        title: "Failure patterns and controls",
+        head: ["Failure pattern", "What it looks like", "Control"],
+        rows: [
+          ["Stage leakage", "A metric computed against one environment stage is reported as another, or mixes data across stages", "The stage is an explicit input, written next to the value. A mismatch fails the run."],
+          ["Failure suppression", "Error-swallowing patterns make a failed run look green and leave the previous value on the board", "Metric jobs fail loudly. A failed run writes a failed status instead of keeping the old value."],
+          ["Stale metrics", "A value with no timestamp keeps being shown long after its mechanism stopped running", "Every value carries computed-at time, stage and mechanism. Values past their freshness window are flagged."],
+        ],
+        after: [
+          "Manual scorers also need a pinned prompt and model version, a recorded sample, and a named runner on a stated cadence. Otherwise the metric is shown as \"manual, last run on &lt;date&gt;\", never as current.",
+          "Absent metrics need a decision, not a placeholder: build a mechanism, run it manually with an owner, or remove it from the scoreboard.",
+        ],
+      },
+    ],
+    alternatives: [
+      ["Automate everything in CI now", "CI runs on code change, not data change, so CI-only metrics go stale between commits. Automating first also locks in the existing stage and failure problems."],
+      ["Move everything to one scheduler", "Fixes freshness but not stage leakage or hidden failures, and has no good place for judgment-based scorers."],
+      ["Keep manual scorers as they are", "Not reproducible and invisible when skipped. The scoreboard can't tell \"unchanged\" from \"not run\"."],
+      ["Remove judgment-based metrics", "Leaves out the quality signals the team most needed. Govern the manual runs instead of dropping them."],
+    ],
+    boundaries: [
+      ["Stage", "Stated explicitly, never inferred. A mismatch fails the run."],
+      ["Success vs failure", "A failed run is reported as failed, never shown as the last good value."],
+      ["Fresh vs stale", "Each metric has a freshness window, and the scoreboard shows when it has passed."],
+      ["Automated vs manual", "Manual, model-backed scoring only with pinned inputs, a named runner and a visible last-run date."],
+    ],
+    risks: [
+      ["Decisions made on a number from the wrong environment", "Stage recorded with every value; mismatch fails the run"],
+      ["A broken metric job goes unnoticed for weeks", "No failure suppression; failed status replaces the value"],
+      ["Old values treated as current", "Timestamp plus freshness window; stale flag on the scoreboard"],
+      ["Manual scores drift between runs", "Pinned prompt, model and sample; named runner"],
+      ["Automating before metric definitions are sound", "Inventory and classify first; reconcile definitions before automating"],
+    ],
+    outcomes: [
+      ["12", "scoreboard metric mechanisms reviewed and classified"],
+      ["3", "automation options compared: CI, scheduled, manual scorer"],
+      ["3", "failure patterns named, each with a control"],
+      ["1", "documented pattern for new and migrated metrics"],
+    ],
+    measureNext: [
+      "Share of scoreboard metrics with stage, timestamp and status recorded",
+      "Share of metrics inside their freshness window at any given time",
+      "Metric job failures detected vs previously hidden, once suppression is removed",
+      "Time from a metric breaking to someone noticing",
+      "Absent metrics resolved: built, made manual with an owner, or removed",
+    ],
+    adrs: ["ADR-005", "ADR-006", "ADR-007"],
+  },
+  {
+    slug: "quality-metric-corpus-design",
+    number: "A3",
+    file: "case-studies/a3-quality-metric-corpus-design.md",
+    title: "Designing a defensible end-to-end quality metric",
+    kicker: "Measurement design",
+    summary: "Corpus, answer-key and data-join requirements for an end-to-end quality metric across 276 candidate products, 57 product types and 17 accounts, designed so the number holds up when someone challenges it.",
+    headline: "276 products · 57 types · 17 accounts",
+    status: "Draft",
+    role: "Product Owner & Solution Architect",
+    engagement: "A commerce/marketplace SaaS platform · AI-driven catalog",
+    period: "Jun 2026 – present",
+    tags: ["Data architecture", "Statistics", "Answer keys", "Data joins"],
+    context: [
+      "The catalog engine takes sellers' raw product data and turns it into marketplace listings across several pipeline stages. The team needed one end-to-end quality number: of the products that go in, how many come out correct? I had already seen a quality target disputed on this engagement because it had no reproducible basis, so this one had to be defensible before it was built.",
+      "A quality metric depends on two things: the corpus (which products are measured) and the answer key (what \"correct\" means for each one). Getting either wrong produces a precise-looking number that means nothing.",
+    ],
+    forces: [
+      ["Product identity isn't stable by default", "The same product can appear under different identifiers across stages and re-runs. Join on the wrong key and the answer key attaches to the wrong output."],
+      ["The candidate pool is wide and thin", "276 products across 57 product types averages fewer than 5 per type."],
+      ["Accounts aren't evenly represented", "If a few of the 17 accounts dominate the corpus, the metric describes those sellers, not the platform."],
+      ["A single number hides its uncertainty", "\"82% correct\" means very different things at n = 30 and n = 300."],
+      ["Schemas drift", "Fields the answer key depends on may be missing, renamed or differently populated at different stages."],
+    ],
+    decision: [
+      "Join the corpus, pipeline outputs and answer key on a stable product identity that survives stages and re-runs.",
+      "Publish every quality figure with its sample size and 95% confidence interval.",
+      "Stratify the corpus across product types, and measure and report each account's share.",
+      "Close join and schema gaps, or explicitly exclude the affected products, before the metric goes live.",
+    ],
+    diagram: {
+      label: "Corpus design flow, from candidate pool to a quality estimate with n and confidence interval",
+      stages: [
+        { step: "Pool", nodes: [{ kind: "data", title: "Candidate pool", detail: "276 products · 57 types · 17 accounts" }] },
+        { step: "Join", nodes: [{ kind: "code", title: "Stable identity join", detail: "Corpus ↔ pipeline outputs ↔ answer key" }], note: "Unresolved identity or schema gap → fix or exclude, documented" },
+        { step: "Cover", nodes: [
+          { kind: "code", title: "Type strata", detail: "Span the product-type range" },
+          { kind: "code", title: "Account share", detail: "Measured and reported" },
+        ] },
+        { step: "Key", nodes: [{ kind: "human", title: "Answer key", detail: "Expected result per corpus product" }] },
+        { step: "Report", nodes: [{ kind: "output", title: "Quality metric", detail: "Estimate + n + 95% CI, no per-type scores" }] },
+      ],
+      caption: "Statistical coverage and join requirements are set before the metric is built, not added afterwards.",
+    },
+    tables: [
+      {
+        title: "Why the statistics shape the design",
+        intro: "Worst-case 95% margin of error for a proportion (p = 0.5), by sample size. Standard arithmetic on the corpus counts.",
+        head: ["Sample", "What it represents", "± margin (95%)"],
+        rows: [
+          ["276", "Full candidate pool", "≈ ±5.9 points"],
+          ["100", "A large sub-group", "≈ ±9.8 points"],
+          ["30", "A small sub-group", "≈ ±17.9 points"],
+          ["~5", "Average products per type (276 ÷ 57)", "≈ ±44 points"],
+        ],
+        after: [
+          "<strong>The headline number is usable; per-type numbers are not.</strong> Stratification makes the overall number representative. It doesn't produce 57 reliable per-type scores.",
+          "<strong>A change has to be bigger than the interval to count.</strong> A 2–3 point movement on the headline is inside the margin and isn't reported as progress.",
+        ],
+      },
+      {
+        title: "Coverage requirements",
+        head: ["Dimension", "Requirement", "Why"],
+        rows: [
+          ["Product identity", "Every corpus product resolves to one stable identity across stages", "Prevents the answer key matching the wrong output"],
+          ["Product type", "Corpus spans the product-type range, not only the most common types", "Keeps the headline number representative"],
+          ["Account", "Each account's share of the corpus is measured and reported", "Stops one seller's data from setting the platform score"],
+          ["Sample size", "n and 95% CI reported with every figure", "Makes the uncertainty visible"],
+          ["Schema", "Fields the answer key depends on are present at every stage measured", "Prevents silent drops and misjoins"],
+        ],
+      },
+    ],
+    alternatives: [
+      ["Measure whatever recent products are easiest to pull", "Over-represents common types and high-volume accounts, so the number describes the biggest sellers."],
+      ["Join on per-run identifiers", "Breaks when products are re-ingested or re-run, attaching expected results to the wrong outputs."],
+      ["Report per-type quality scores", "At ~5 products per type the intervals are too wide to mean anything."],
+      ["Report a single percentage without an interval", "Invites reading noise as progress and reopens the \"where does this number come from\" dispute."],
+      ["Build the metric first, fix data gaps later", "The first published number would be wrong, and a wrong first number is hard to retract."],
+    ],
+    boundaries: [
+      ["Identity", "Resolved to one stable identity, or excluded. Never guessed."],
+      ["Precision", "Only figures whose interval supports a conclusion are reported."],
+      ["Representation", "Product-type coverage and account share are checked before every run of the metric."],
+      ["Launch", "No metric goes live with known join or schema gaps unresolved and undocumented."],
+    ],
+    risks: [
+      ["Expected results attached to the wrong product", "Stable identity join; misjoins treated as gaps to fix or exclude"],
+      ["Metric dominated by a few accounts", "Account share measured and reported with the metric"],
+      ["Noise reported as progress", "n and CI with every figure; no per-type scores"],
+      ["Products silently dropped by schema gaps", "Gaps found and resolved or explicitly excluded before launch"],
+      ["The number is disputed later", "Corpus, answer key and join logic documented so the figure can be reproduced"],
+    ],
+    outcomes: [
+      ["276", "candidate products evaluated for the corpus"],
+      ["57", "product types in the stratification design"],
+      ["17", "accounts checked for concentration"],
+      ["±5.9", "worst-case 95% margin on the full pool (arithmetic, not a result)"],
+    ],
+    measureNext: [
+      "Share of corpus products resolving to one stable identity across all stages measured",
+      "Headline quality estimate with n and 95% CI, tracked across releases",
+      "Largest single-account share, and how the metric moves without that account",
+      "Join and schema gaps open vs resolved",
+      "Agreement between independent reviewers on a sample of answer-key entries",
+    ],
+    adrs: ["ADR-008", "ADR-009", "ADR-010"],
+  },
+  {
+    slug: "reusable-channel-onboarding",
+    number: "A4",
+    file: "case-studies/a4-reusable-channel-onboarding.md",
+    title: "Reusable channel onboarding for a marketplace pipeline",
+    kicker: "Integration architecture",
+    summary: "An RFC for extending the transformation pipeline to a new sales channel: a shared core with channel-specific edges, 25 artifact types classified, and a per-category rollout loop instead of a big-bang switch-on.",
+    headline: "11 runtime · 14 tooling artifact types",
+    status: "Draft",
+    role: "Product Owner & Solution Architect",
+    engagement: "A commerce/marketplace SaaS platform · AI-driven catalog",
+    period: "Jun 2026 – present",
+    tags: ["Integration", "RFC", "Extensibility", "Rollout planning"],
+    context: [
+      "The platform's transformation pipeline turns sellers' product data into listings that each marketplace channel accepts. Each channel has its own categories, attributes and rules. Supporting a new sales channel meant working out which parts of an existing channel's implementation could be reused, which had to be rebuilt, and in what order to bring categories live.",
+      "This RFC built on two earlier pieces of my work: a channel-bootstrap RFC with category-classification research that settled classification ambiguity before the build, and category-mapping validation for existing channels (8+ review packets covering hundreds of SKUs).",
+    ],
+    forces: [
+      ["Copying a whole channel is the easy path", "A full copy duplicates logic that should be shared, so the next fix has to be made twice and the copies drift."],
+      ["Not everything is code", "Mappings, transforms, rules, configuration, scripts and runbooks all make a channel work, and all need classifying."],
+      ["Runtime and tooling carry different risk", "What runs in production needs more scrutiny than what an engineer uses to prepare or check it."],
+      ["Channels go live one category at a time", "Switching on a whole channel makes it hard to tell which category caused a problem."],
+      ["Classification ambiguity is costly late", "Unclear product-to-category classification stalls the build or forces rework."],
+    ],
+    decision: [
+      "Keep shared capabilities in one core. Each channel supplies only its own mappings, transforms and operational artifacts.",
+      "Use an existing channel as the reference implementation and classify its artifacts: 11 runtime types and 14 tooling types.",
+      "Bring each product category live through the same loop: select, map, validate, enable, monitor.",
+      "Settle product-to-category classification before category work starts.",
+    ],
+    diagram: {
+      label: "Shared core and channel-specific edge, from seller data to a marketplace channel",
+      stages: [
+        { step: "Shared", nodes: [
+          { kind: "code", title: "Intake + normalisation", detail: "Built once, used by every channel" },
+          { kind: "code", title: "Transform / validation engine", detail: "Shared capabilities only" },
+        ], note: "Changes here are reviewed as affecting every channel" },
+        { step: "Edge", nodes: [
+          { kind: "data", title: "Mappings", detail: "Category and attribute mappings for this channel" },
+          { kind: "code", title: "Channel transforms + rules", detail: "Only what this channel needs" },
+          { kind: "output", title: "Operational artifacts", detail: "Configuration and runbooks" },
+        ] },
+        { step: "Gate", nodes: [{ kind: "human", title: "Validation packet review", detail: "Real SKUs checked per category before enablement" }] },
+        { step: "Channel", nodes: [{ kind: "external", title: "Marketplace channel", detail: "Enabled one category at a time" }] },
+      ],
+      caption: "A new channel builds only its edge. The shared core stays shared.",
+    },
+    tables: [
+      {
+        title: "Artifact classification",
+        intro: "The reference implementation's artifacts were sorted on two axes: runtime vs tooling, and shared vs channel-specific. Examples are genericized.",
+        head: ["Layer", "Count", "What it covers", "Reuse rule"],
+        rows: [
+          ["Runtime", "11 types", "What the pipeline executes for a channel, e.g. category mappings, attribute transforms, validation rules, channel configuration", "Shared engine reused as is; channel-specific runtime artifacts authored new for each channel"],
+          ["Tooling", "14 types", "What engineers use to build, check and operate a channel, e.g. mapping-preparation scripts, review-packet generators, test fixtures, runbooks", "Templated once; each channel fills in its own instance"],
+        ],
+        after: ["Runtime vs tooling sets the level of review and testing. Shared vs channel-specific sets what a new channel has to build. Artifacts that are both runtime and shared get the most scrutiny."],
+      },
+      {
+        title: "The per-category rollout loop",
+        head: ["Step", "What happens", "Exit criterion"],
+        rows: [
+          ["1 · Select", "Pick the next category by seller demand and mapping readiness", "Category classification settled"],
+          ["2 · Map", "Author category and attribute mappings for the channel", "Required attributes mapped"],
+          ["3 · Validate", "Review a validation packet of real SKUs against the mapping", "Failures fixed, or accepted with an owner"],
+          ["4 · Enable", "Turn the category on for the channel", "Listings flowing"],
+          ["5 · Monitor", "Watch blocks and rejections for that category", "Stable, then the next category"],
+        ],
+        after: ["Each loop is small enough to roll back, and every problem traces to one category."],
+      },
+    ],
+    alternatives: [
+      ["Fork an existing channel wholesale", "Fastest first channel, slowest every channel after: duplicated logic, drift, and fixes made more than once."],
+      ["Generalise everything into the shared core", "Pushes channel quirks into shared code, so every channel pays for every other channel's rules."],
+      ["Enable the whole channel at once", "Problems can't be traced to a category, and rollback means turning off the whole channel."],
+      ["Build first, resolve classification as it comes up", "Classification surprises mid-build cause rework, which the earlier bootstrap research was designed to avoid."],
+    ],
+    boundaries: [
+      ["Shared vs channel-specific", "Channel rules live at the edge. The shared core changes only for something every channel needs."],
+      ["Runtime vs tooling", "Runtime artifacts get production-grade review and tests. Tooling follows templates."],
+      ["Category gate", "No category is enabled without a reviewed validation packet."],
+      ["Classification", "Category classification is settled before mapping starts."],
+    ],
+    risks: [
+      ["Channel logic drifts into the shared core", "Edge-first rule; shared-core changes reviewed as affecting every channel"],
+      ["A bad mapping reaches live listings", "Validation packet per category before enablement"],
+      ["A problem can't be traced to its source", "One category per loop; monitor before moving on"],
+      ["A new channel rebuilds tooling from scratch", "14 tooling artifact types templated from the reference implementation"],
+      ["Classification ambiguity stalls the build", "Resolved up front, following the earlier bootstrap research"],
+    ],
+    outcomes: [
+      ["11", "runtime artifact types classified"],
+      ["14", "tooling artifact types classified"],
+      ["1", "RFC for extending the pipeline to a new channel"],
+      ["8+", "earlier validation packets the loop builds on"],
+    ],
+    measureNext: [
+      "Time to bring a category live on the new channel, first category vs later ones",
+      "Share of artifacts reused from templates vs authored new, per channel",
+      "Validation-packet failure rate per category, and failures caught before enablement",
+      "Post-enablement block and rejection rate per category",
+      "Shared-core changes needed per new channel (fewer means the edges are holding)",
+    ],
+    adrs: ["ADR-011", "ADR-012", "ADR-013"],
+  },
 ];
 
 const planned = [
-  ["A2", "Metrics automation: CI vs scheduled vs manual scorers", "Twelve scoreboard metric mechanisms classified as automated, manual or absent, with controls for stage leakage, silenced failures and stale metrics."],
-  ["A3", "Designing a defensible end-to-end quality metric", "Corpus and answer-key design across 276 candidate products, 57 product types and 17 accounts: stable identity joins, stratification and confidence intervals."],
-  ["A4", "Reusable channel onboarding for a marketplace pipeline", "An RFC separating shared capabilities from channel-specific mappings, classifying 11 runtime and 14 tooling artifact types, with a per-category rollout loop."],
 ];
 
 const decisions = [
@@ -124,6 +439,15 @@ const decisions = [
   { id: "ADR-002", file: "decisions/adr-002-script-vs-model-boundary.md", title: "Script vs model boundary", study: "A1", body: "Scripted workers for every deterministic step. Models only for judgment and resolution, and their output never changes a product directly." },
   { id: "ADR-003", file: "decisions/adr-003-three-clean-run-verification.md", title: "Three-clean-run verification", study: "A1", body: "A repair counts as verified only after three consecutive clean runs, catching flaky fixes before packaging rather than after re-drive." },
   { id: "ADR-004", file: "decisions/adr-004-named-stop-states.md", title: "Named stop states with owners", study: "A1", body: "Every case that leaves automation ends in a named state with an owner and a reason, so nothing stalls unseen." },
+  { id: "ADR-005", file: "decisions/adr-005-stage-is-explicit.md", title: "Stage is an explicit input", study: "A2", body: "Every metric job states its environment stage, records it next to the value, and fails if the configured and actual stage disagree." },
+  { id: "ADR-006", file: "decisions/adr-006-metric-jobs-fail-loudly.md", title: "Metric jobs fail loudly", study: "A2", body: "No failure suppression. A failed run writes a failed status instead of leaving the last good value on the scoreboard." },
+  { id: "ADR-007", file: "decisions/adr-007-freshness-is-part-of-the-metric.md", title: "Freshness is part of the metric", study: "A2", body: "Every value carries time, stage and mechanism, and is flagged once it passes its freshness window." },
+  { id: "ADR-008", file: "decisions/adr-008-stable-product-identity.md", title: "Join on stable product identity", study: "A3", body: "Corpus, outputs and answer key join on an identity that survives stages and re-runs. Unresolvable products are fixed or excluded, never guessed." },
+  { id: "ADR-009", file: "decisions/adr-009-report-with-confidence-intervals.md", title: "Report n and a confidence interval", study: "A3", body: "Every quality figure ships with its sample size and 95% CI. No per-type scores at a corpus this thin." },
+  { id: "ADR-010", file: "decisions/adr-010-stratify-and-report-concentration.md", title: "Stratify; report account share", study: "A3", body: "Cover the product-type range and report each account's share, so the platform number isn't really a few sellers' number." },
+  { id: "ADR-011", file: "decisions/adr-011-shared-core-channel-edges.md", title: "Shared core, channel edges", study: "A4", body: "Shared capabilities live in one core. Each channel supplies only its own mappings, transforms and operational artifacts." },
+  { id: "ADR-012", file: "decisions/adr-012-classify-runtime-and-tooling.md", title: "Classify runtime vs tooling", study: "A4", body: "11 runtime and 14 tooling artifact types, each also shared or channel-specific, so a new channel starts from a checklist." },
+  { id: "ADR-013", file: "decisions/adr-013-per-category-rollout.md", title: "One category at a time", study: "A4", body: "Select, map, validate, enable, monitor, then the next category, so every problem traces to one category." },
 ];
 
 const principles = [
@@ -247,15 +571,16 @@ function renderStudy(slug) {
     <section class="detail-section"><h2>Context</h2>${s.context.map((p) => `<p>${p}</p>`).join("")}</section>
     <section class="detail-section"><h2>Forces</h2><ul>${s.forces.map(([t, b]) => `<li><strong>${t}.</strong> ${b}</li>`).join("")}</ul></section>
     <section class="detail-section"><h2>Decision</h2><ul>${s.decision.map((d) => `<li>${d}</li>`).join("")}</ul>${diagram(s.diagram)}</section>
-    <section class="detail-section"><h2>Worker roster</h2><p>Scripted workers handle deterministic work. Model-backed workers are limited to judgment and resolution.</p>${table(["#", "Worker", "Pass", "Type", "Responsibility"], s.roster, [0, 2])}</section>
+    ${s.roster ? `<section class="detail-section"><h2>Worker roster</h2><p>Scripted workers handle deterministic work. Model-backed workers are limited to judgment and resolution.</p>${table(["#", "Worker", "Pass", "Type", "Responsibility"], s.roster, [0, 2])}</section>` : ""}
+    ${(s.tables || []).map((t) => `<section class="detail-section"><h2>${t.title}</h2>${t.intro ? `<p>${t.intro}</p>` : ""}${table(t.head, t.rows)}${(t.after || []).map((a) => `<p>${a}</p>`).join("")}</section>`).join("")}
     <section class="detail-section"><h2>Alternatives considered</h2>${table(["Option", "Why not"], s.alternatives)}</section>
     <section class="detail-section"><h2>Control boundaries</h2>${table(["Boundary", "Rule"], s.boundaries)}</section>
-    <section class="detail-section"><h2>Handoff contract</h2><p>Every worker hand-off uses the same envelope, so the lead agent and the audit trail can treat all eight workers alike.</p>${code(s.contract)}<h3 style="margin-top:1.6rem">Named stop states</h3>${table(["Stop state", "Entered when", "Owner"], s.stopStates.map(([a, b, c]) => [`<code>${a}</code>`, b, c]))}<p>Each stop state is a finished result with an owner, not an error. Every blocked product is either fixed, waiting for approval, or with a named owner.</p></section>
+    ${s.contract ? `<section class="detail-section"><h2>Handoff contract</h2><p>Every worker hand-off uses the same envelope, so the lead agent and the audit trail can treat all eight workers alike.</p>${code(s.contract)}<h3 style="margin-top:1.6rem">Named stop states</h3>${table(["Stop state", "Entered when", "Owner"], s.stopStates.map(([a, b, c]) => [`<code>${a}</code>`, b, c]))}<p>Each stop state is a finished result with an owner, not an error. Every blocked product is either fixed, waiting for approval, or with a named owner.</p></section>` : ""}
     <section class="detail-section"><h2>Risks and mitigations</h2>${table(["Risk", "Mitigation in the design"], s.risks)}</section>
     <section class="detail-section"><h2>Scope evidence</h2><div class="outcomes-grid">${s.outcomes.map(([v, l]) => `<div class="outcome-card"><span class="outcome-value">${v}</span><span class="outcome-label">${l}</span></div>`).join("")}</div></section>
     <section class="detail-section"><h2>What I'd measure next</h2><div class="scope-note"><strong>Scope-driven case study.</strong><br>The engagement is ongoing, so outcome metrics are being set up rather than estimated after the fact.</div><ul>${s.measureNext.map((m) => `<li>${m}</li>`).join("")}</ul></section>
     <section class="detail-section"><h2>Decision records</h2><ul>${adrLinks.map((d) => `<li><a href="${REPO}/${d.file}" target="_blank" rel="noreferrer">${d.id}: ${d.title} ↗</a></li>`).join("")}</ul><div class="button-row"><a class="button button-primary" href="${REPO}/${s.file}" target="_blank" rel="noreferrer">Full write-up on GitHub <span aria-hidden="true">↗</span></a></div></section>
-  </article><aside class="detail-sidebar"><div class="side-label">Planned case studies</div><div class="side-list">${planned.map(([n, t]) => `<span>${n} · ${t}</span>`).join("")}</div><div class="side-label">Related portfolios</div><div class="side-list"><a href="https://blpatnaik31.github.io/fde/">FDE: runnable builds →</a><a href="https://blpatnaik31.github.io/tpm/">TPM: delivery outcomes →</a></div></aside></div>`;
+  </article><aside class="detail-sidebar"><div class="side-label">More case studies</div><div class="side-list">${caseStudies.filter((o) => o.slug !== s.slug).map((o) => `<a href="#/case-studies/${o.slug}">${o.number} · ${o.kicker}</a>`).join("")}</div>${planned.length ? `<div class="side-label">Planned case studies</div><div class="side-list">${planned.map(([n, t]) => `<span>${n} · ${t}</span>`).join("")}</div>` : ""}<div class="side-label">Related portfolios</div><div class="side-list"><a href="https://blpatnaik31.github.io/fde/">FDE: runnable builds →</a><a href="https://blpatnaik31.github.io/tpm/">TPM: delivery outcomes →</a></div></aside></div>`;
 }
 
 function renderDecisions() {

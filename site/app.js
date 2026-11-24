@@ -324,10 +324,114 @@ const caseStudies = [
     ],
     adrs: ["ADR-008", "ADR-009", "ADR-010"],
   },
+  {
+    slug: "reusable-channel-onboarding",
+    number: "A4",
+    file: "case-studies/a4-reusable-channel-onboarding.md",
+    title: "Reusable channel onboarding for a marketplace pipeline",
+    kicker: "Integration architecture",
+    summary: "An RFC for extending the transformation pipeline to a new sales channel: a shared core with channel-specific edges, 25 artifact types classified, and a per-category rollout loop instead of a big-bang switch-on.",
+    headline: "11 runtime · 14 tooling artifact types",
+    status: "Draft",
+    role: "Product Owner & Solution Architect",
+    engagement: "A commerce/marketplace SaaS platform · AI-driven catalog",
+    period: "Jun 2026 – present",
+    tags: ["Integration", "RFC", "Extensibility", "Rollout planning"],
+    context: [
+      "The platform's transformation pipeline turns sellers' product data into listings that each marketplace channel accepts. Each channel has its own categories, attributes and rules. Supporting a new sales channel meant working out which parts of an existing channel's implementation could be reused, which had to be rebuilt, and in what order to bring categories live.",
+      "This RFC built on two earlier pieces of my work: a channel-bootstrap RFC with category-classification research that settled classification ambiguity before the build, and category-mapping validation for existing channels (8+ review packets covering hundreds of SKUs).",
+    ],
+    forces: [
+      ["Copying a whole channel is the easy path", "A full copy duplicates logic that should be shared, so the next fix has to be made twice and the copies drift."],
+      ["Not everything is code", "Mappings, transforms, rules, configuration, scripts and runbooks all make a channel work, and all need classifying."],
+      ["Runtime and tooling carry different risk", "What runs in production needs more scrutiny than what an engineer uses to prepare or check it."],
+      ["Channels go live one category at a time", "Switching on a whole channel makes it hard to tell which category caused a problem."],
+      ["Classification ambiguity is costly late", "Unclear product-to-category classification stalls the build or forces rework."],
+    ],
+    decision: [
+      "Keep shared capabilities in one core. Each channel supplies only its own mappings, transforms and operational artifacts.",
+      "Use an existing channel as the reference implementation and classify its artifacts: 11 runtime types and 14 tooling types.",
+      "Bring each product category live through the same loop: select, map, validate, enable, monitor.",
+      "Settle product-to-category classification before category work starts.",
+    ],
+    diagram: {
+      label: "Shared core and channel-specific edge, from seller data to a marketplace channel",
+      stages: [
+        { step: "Shared", nodes: [
+          { kind: "code", title: "Intake + normalisation", detail: "Built once, used by every channel" },
+          { kind: "code", title: "Transform / validation engine", detail: "Shared capabilities only" },
+        ], note: "Changes here are reviewed as affecting every channel" },
+        { step: "Edge", nodes: [
+          { kind: "data", title: "Mappings", detail: "Category and attribute mappings for this channel" },
+          { kind: "code", title: "Channel transforms + rules", detail: "Only what this channel needs" },
+          { kind: "output", title: "Operational artifacts", detail: "Configuration and runbooks" },
+        ] },
+        { step: "Gate", nodes: [{ kind: "human", title: "Validation packet review", detail: "Real SKUs checked per category before enablement" }] },
+        { step: "Channel", nodes: [{ kind: "external", title: "Marketplace channel", detail: "Enabled one category at a time" }] },
+      ],
+      caption: "A new channel builds only its edge. The shared core stays shared.",
+    },
+    tables: [
+      {
+        title: "Artifact classification",
+        intro: "The reference implementation's artifacts were sorted on two axes: runtime vs tooling, and shared vs channel-specific. Examples are genericized.",
+        head: ["Layer", "Count", "What it covers", "Reuse rule"],
+        rows: [
+          ["Runtime", "11 types", "What the pipeline executes for a channel, e.g. category mappings, attribute transforms, validation rules, channel configuration", "Shared engine reused as is; channel-specific runtime artifacts authored new for each channel"],
+          ["Tooling", "14 types", "What engineers use to build, check and operate a channel, e.g. mapping-preparation scripts, review-packet generators, test fixtures, runbooks", "Templated once; each channel fills in its own instance"],
+        ],
+        after: ["Runtime vs tooling sets the level of review and testing. Shared vs channel-specific sets what a new channel has to build. Artifacts that are both runtime and shared get the most scrutiny."],
+      },
+      {
+        title: "The per-category rollout loop",
+        head: ["Step", "What happens", "Exit criterion"],
+        rows: [
+          ["1 · Select", "Pick the next category by seller demand and mapping readiness", "Category classification settled"],
+          ["2 · Map", "Author category and attribute mappings for the channel", "Required attributes mapped"],
+          ["3 · Validate", "Review a validation packet of real SKUs against the mapping", "Failures fixed, or accepted with an owner"],
+          ["4 · Enable", "Turn the category on for the channel", "Listings flowing"],
+          ["5 · Monitor", "Watch blocks and rejections for that category", "Stable, then the next category"],
+        ],
+        after: ["Each loop is small enough to roll back, and every problem traces to one category."],
+      },
+    ],
+    alternatives: [
+      ["Fork an existing channel wholesale", "Fastest first channel, slowest every channel after: duplicated logic, drift, and fixes made more than once."],
+      ["Generalise everything into the shared core", "Pushes channel quirks into shared code, so every channel pays for every other channel's rules."],
+      ["Enable the whole channel at once", "Problems can't be traced to a category, and rollback means turning off the whole channel."],
+      ["Build first, resolve classification as it comes up", "Classification surprises mid-build cause rework, which the earlier bootstrap research was designed to avoid."],
+    ],
+    boundaries: [
+      ["Shared vs channel-specific", "Channel rules live at the edge. The shared core changes only for something every channel needs."],
+      ["Runtime vs tooling", "Runtime artifacts get production-grade review and tests. Tooling follows templates."],
+      ["Category gate", "No category is enabled without a reviewed validation packet."],
+      ["Classification", "Category classification is settled before mapping starts."],
+    ],
+    risks: [
+      ["Channel logic drifts into the shared core", "Edge-first rule; shared-core changes reviewed as affecting every channel"],
+      ["A bad mapping reaches live listings", "Validation packet per category before enablement"],
+      ["A problem can't be traced to its source", "One category per loop; monitor before moving on"],
+      ["A new channel rebuilds tooling from scratch", "14 tooling artifact types templated from the reference implementation"],
+      ["Classification ambiguity stalls the build", "Resolved up front, following the earlier bootstrap research"],
+    ],
+    outcomes: [
+      ["11", "runtime artifact types classified"],
+      ["14", "tooling artifact types classified"],
+      ["1", "RFC for extending the pipeline to a new channel"],
+      ["8+", "earlier validation packets the loop builds on"],
+    ],
+    measureNext: [
+      "Time to bring a category live on the new channel, first category vs later ones",
+      "Share of artifacts reused from templates vs authored new, per channel",
+      "Validation-packet failure rate per category, and failures caught before enablement",
+      "Post-enablement block and rejection rate per category",
+      "Shared-core changes needed per new channel (fewer means the edges are holding)",
+    ],
+    adrs: ["ADR-011", "ADR-012", "ADR-013"],
+  },
 ];
 
 const planned = [
-  ["A4", "Reusable channel onboarding for a marketplace pipeline", "An RFC separating shared capabilities from channel-specific mappings, classifying 11 runtime and 14 tooling artifact types, with a per-category rollout loop."],
 ];
 
 const decisions = [
@@ -341,6 +445,9 @@ const decisions = [
   { id: "ADR-008", file: "decisions/adr-008-stable-product-identity.md", title: "Join on stable product identity", study: "A3", body: "Corpus, outputs and answer key join on an identity that survives stages and re-runs. Unresolvable products are fixed or excluded, never guessed." },
   { id: "ADR-009", file: "decisions/adr-009-report-with-confidence-intervals.md", title: "Report n and a confidence interval", study: "A3", body: "Every quality figure ships with its sample size and 95% CI. No per-type scores at a corpus this thin." },
   { id: "ADR-010", file: "decisions/adr-010-stratify-and-report-concentration.md", title: "Stratify; report account share", study: "A3", body: "Cover the product-type range and report each account's share, so the platform number isn't really a few sellers' number." },
+  { id: "ADR-011", file: "decisions/adr-011-shared-core-channel-edges.md", title: "Shared core, channel edges", study: "A4", body: "Shared capabilities live in one core. Each channel supplies only its own mappings, transforms and operational artifacts." },
+  { id: "ADR-012", file: "decisions/adr-012-classify-runtime-and-tooling.md", title: "Classify runtime vs tooling", study: "A4", body: "11 runtime and 14 tooling artifact types, each also shared or channel-specific, so a new channel starts from a checklist." },
+  { id: "ADR-013", file: "decisions/adr-013-per-category-rollout.md", title: "One category at a time", study: "A4", body: "Select, map, validate, enable, monitor, then the next category, so every problem traces to one category." },
 ];
 
 const principles = [
@@ -473,7 +580,7 @@ function renderStudy(slug) {
     <section class="detail-section"><h2>Scope evidence</h2><div class="outcomes-grid">${s.outcomes.map(([v, l]) => `<div class="outcome-card"><span class="outcome-value">${v}</span><span class="outcome-label">${l}</span></div>`).join("")}</div></section>
     <section class="detail-section"><h2>What I'd measure next</h2><div class="scope-note"><strong>Scope-driven case study.</strong><br>The engagement is ongoing, so outcome metrics are being set up rather than estimated after the fact.</div><ul>${s.measureNext.map((m) => `<li>${m}</li>`).join("")}</ul></section>
     <section class="detail-section"><h2>Decision records</h2><ul>${adrLinks.map((d) => `<li><a href="${REPO}/${d.file}" target="_blank" rel="noreferrer">${d.id}: ${d.title} ↗</a></li>`).join("")}</ul><div class="button-row"><a class="button button-primary" href="${REPO}/${s.file}" target="_blank" rel="noreferrer">Full write-up on GitHub <span aria-hidden="true">↗</span></a></div></section>
-  </article><aside class="detail-sidebar"><div class="side-label">Planned case studies</div><div class="side-list">${planned.map(([n, t]) => `<span>${n} · ${t}</span>`).join("")}</div><div class="side-label">Related portfolios</div><div class="side-list"><a href="https://blpatnaik31.github.io/fde/">FDE: runnable builds →</a><a href="https://blpatnaik31.github.io/tpm/">TPM: delivery outcomes →</a></div></aside></div>`;
+  </article><aside class="detail-sidebar"><div class="side-label">More case studies</div><div class="side-list">${caseStudies.filter((o) => o.slug !== s.slug).map((o) => `<a href="#/case-studies/${o.slug}">${o.number} · ${o.kicker}</a>`).join("")}</div>${planned.length ? `<div class="side-label">Planned case studies</div><div class="side-list">${planned.map(([n, t]) => `<span>${n} · ${t}</span>`).join("")}</div>` : ""}<div class="side-label">Related portfolios</div><div class="side-list"><a href="https://blpatnaik31.github.io/fde/">FDE: runnable builds →</a><a href="https://blpatnaik31.github.io/tpm/">TPM: delivery outcomes →</a></div></aside></div>`;
 }
 
 function renderDecisions() {

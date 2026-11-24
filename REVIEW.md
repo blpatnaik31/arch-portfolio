@@ -43,6 +43,14 @@ Needs your sign-off or correction:
 4. **Answer key:** the workbook doesn't say how expected results were defined (human-labelled, rule-derived, or mixed). The diagram shows it as a human step. Correct it if that's wrong.
 5. **Alternatives considered** (§5): confirm these were actually weighed.
 
-## A4
+## A4 — Reusable channel onboarding
 
-Not drafted yet. It appears on the site as a "Planned" card only, without a detail page.
+The master workbook (Project 24) confirms: an RFC extending the marketplace transformation pipeline to a new sales channel; shared capabilities separated from channel-specific mappings, transforms and operational artifacts; a repeatable per-category rollout loop; **11** runtime and **14** tooling artifact types classified for a reference implementation. Background comes from Project 7 (channel-bootstrap RFC, classification research) and Project 3 (8+ validation packets, hundreds of SKUs).
+
+Needs your sign-off or correction:
+
+1. **Artifact examples** (§3): the examples given for each layer are genericized guesses at the kind of artifact. The real 25 type names aren't in the workbook. Replace them with genericized versions of the real ones, or keep them generic.
+2. **Second classification axis** (§3, ADR-012): "shared vs channel-specific" as a second axis next to runtime vs tooling is my framing of "separated shared capabilities from channel-specific" work. Confirm.
+3. **The rollout loop's steps and exit criteria** (§4, ADR-013): the workbook confirms a repeatable per-category loop but not its steps. The validation-packet step comes from Project 3. Confirm or correct the rest.
+4. **Shared-core diagram** (§2): the boxes ("Intake + normalisation", "Shared transform / validation engine") are generic. Make sure they don't imply a structure that differs from the real pipeline.
+5. **Alternatives considered** (§5): confirm these were actually weighed.

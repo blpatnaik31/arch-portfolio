@@ -14,3 +14,6 @@ Short records of the key decisions behind each case study, in the usual ADR form
 | [ADR-008](adr-008-stable-product-identity.md) | Join corpus, outputs and answer key on stable product identity | A3 | Accepted |
 | [ADR-009](adr-009-report-with-confidence-intervals.md) | Report every quality figure with n and a 95% CI; no per-type scores | A3 | Accepted |
 | [ADR-010](adr-010-stratify-and-report-concentration.md) | Stratify by product type; measure and report account concentration | A3 | Accepted |
+| [ADR-011](adr-011-shared-core-channel-edges.md) | Shared core, channel-specific edges | A4 | Accepted |
+| [ADR-012](adr-012-classify-runtime-and-tooling.md) | Classify every channel artifact as runtime or tooling, shared or channel-specific | A4 | Accepted |
+| [ADR-013](adr-013-per-category-rollout.md) | Roll a channel out one category at a time | A4 | Accepted |
